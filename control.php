@@ -177,7 +177,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
                 // @todo: Set moved if blind was moved by this program
                 $stateData[$i]['lastMoved'] = date('Ymd');
             } else {
-                echo "Dry Run: Would execute action '{$action}' for blind '{$device['name']}'\n";
+                echo date('Y-m-d H:i:s')." Dry Run: Would execute action '{$action}' for blind '{$device['name']}'\n";
             }
 
             // Execute only the first matching rule to prevent contradicting rules
@@ -600,9 +600,9 @@ function getSanitizedExpression($condition){
  */
 function getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust){
     $txt = "Current weather data:\n";
-    $txt .=  "- Temperature: $temperature C\n";
+    $txt .=  "- Temperature: $temperature °C\n";
     $txt .=  "- Rainfall: $rain mm/10min\n";
-    $txt .=  "- Global sun radiation: $radiation W/m2\n";
+    $txt .=  "- Global sun radiation: $radiation W/m²\n";
     $txt .=  "- Wind speed: $wind km/h\n";
     $txt .=  "- Gust speed: $gust km/h\n";
     return $txt;
