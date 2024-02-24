@@ -387,7 +387,14 @@ function getWeatherData($cached = false){
     foreach (explode("\n", $return) as $line){
         $components = explode(';', $line);
         if (strcmp($components[0], WEATHER_STATION_ID) == 0){
-            return [$components[2], $components[3], $components[5], $components[9], $components[10]];
+            // Return sanitized float values
+            return [
+                filter_var($components[2], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
+                filter_var($components[3], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
+                filter_var($components[5], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
+                filter_var($components[9], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
+                filter_var($components[10], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION)
+            ];
         }
 
     }
