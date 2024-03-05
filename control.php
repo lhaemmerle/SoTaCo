@@ -10,7 +10,7 @@ include('config.php');
 date_default_timezone_set(TIMEZONE);
 
 // Get command options
-$longOpts = ['identify:','name:','value:', 'weather', 'temperature:', 'wind:', 'gust:', 'rain:', 'radiation:', 'execute', 'cache', 'debug'];
+$longOpts = ['identify:','name:','value:', 'weather', 'temperature:', 'wind:', 'gust:', 'rain:', 'radiation:', 'hour:', 'minute:', 'execute', 'cache', 'debug'];
 $opts = getopt('d:u:m:i::h', $longOpts);
 
 // Set debug constanttemperature
@@ -20,6 +20,14 @@ define('EXECUTE', isset($opts['execute']));
 
 // Print input argument
 printValueIfOnDebug("Options = ".print_r($opts, true));
+
+// Set time variables
+$hour = date('H');
+$minute = date('i');
+$day = (date('w') + 1);
+$month = date('n');
+$week = preg_replace('/0/', '', date('W'));
+$yearday = (date('z') + 1);
 
 // How help
 if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
@@ -39,12 +47,12 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
     $jsonObject = ['devices' => $result];
     echo json_encode($jsonObject, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     exit;
-} else if (isset($opts['r']) && isInteger($opts['r'])){
-    $result = sendCommand(TAHOMA_DEVICES[$opts['r']]['id'], 'up');
+} else if (isset($opts['u']) && isInteger($opts['u'])){
+    $result = sendCommand(TAHOMA_DEVICES[$opts['u']]['id'], 'up');
     printValueIfOnDebug($result);
     exit;
-} else if (isset($opts['e']) && isInteger($opts['e'])){
-    $result = sendCommand(TAHOMA_DEVICES[$opts['e']]['id'], 'down');
+} else if (isset($opts['d']) && isInteger($opts['d'])){
+    $result = sendCommand(TAHOMA_DEVICES[$opts['d']]['id'], 'down');
     printValueIfOnDebug($result);
     exit;
 } else if (isset($opts['m']) && isInteger($opts['m'])){
@@ -64,7 +72,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
 
     // Get weather data
     list($temperature, $rain, $radiation, $wind, $gust) = getWeatherData(CACHED);
-    echo getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust);
+    echo getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust, $hour, $minute);
     exit;
 } else {
     // Automatically control blinds
@@ -92,8 +100,16 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
         $gust = $opts['gust'];   
     }
 
+    if (isset($opts['hour']) && is_numeric($opts['hour'])){
+        $hour = $opts['hour'];
+    }
+
+    if (isset($opts['minute']) && is_numeric($opts['minute'])){
+        $minute = $opts['minute'];
+    }
+
     // Compose weather debug information
-    printValueIfOnDebug(getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust));
+    printValueIfOnDebug(getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust, $hour, $minute));
 
     // Get state information
     if (is_file(CACHE_DIR.'/sotaco-state-data.json')){
@@ -122,14 +138,6 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             }
         }
     }
-
-    // Set time variables
-    $hour = date('H');
-    $minute = date('i');
-    $day = (date('w') + 1);
-    $month = date('n');
-    $week = preg_replace('/0/', '', date('W'));
-    $yearday = (date('z') + 1);
 
     // Process all device rules
     foreach ($infrastructure as $i => $device){
@@ -448,6 +456,12 @@ Set wind (gust) in km/h instead of reading it from weather data
 --radation <float>
 Set radiation in W/m² instead of reading it from weather data
 
+--hour <int>
+Set current hour of today
+
+--minute <int>
+Set current minute of today
+
 --execute
 Actually move blinds. If this parameter is not set all actions
 are executed only in dry-run mode that does not move any blinds.
@@ -468,7 +482,7 @@ Show help
 php controlBlinds.php -i [--debug]
 Get information about all devices
 
-php controlBlinds.php -e|-r|-m <device number> [--debug]
+php controlBlinds.php -d|-u|-m <device number> [--debug]
 Control blinds manually
 
 php controlBlinds.php --identify <device number> [--debug]
@@ -479,7 +493,7 @@ Set name for device
 
 php controlBlinds.php \
     [--temperature <float>] [--wind <float>] [--gust <float>] [--rain <float>] \
-    [--radiation <float>] [-temperature <float>] [--execute] [--debug]
+    [--radiation <float>] [--temperature <float>] [--hour <int>]  [--hour <int>] [--execute] [--debug]
 Control blinds automatically, overwrite weather data with given weather values if available.
 The blinds are only moved for real if the parameter --execute is added.
 
@@ -604,9 +618,12 @@ function getSanitizedExpression($condition){
  * @param float $radiation
  * @param float $wind
  * @param float $gust
+ * @param int $hour
+ * @param int $minute
  */
-function getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust){
-    $txt = "Current weather data:\n";
+function getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust, $hour, $minute){
+    $txt = "Time: $hour:$minute\n";
+    $txt .= "Current weather data:\n";
     $txt .=  "- Temperature: $temperature °C\n";
     $txt .=  "- Rainfall: $rain mm/10min\n";
     $txt .=  "- Global sun radiation: $radiation W/m²\n";
