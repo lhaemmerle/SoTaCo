@@ -1,6 +1,6 @@
 <?php
-// Somfy Controller v0.5
-// Date: 2024-02-24
+// Somfy Controller v0.6
+// Date: 2024-03-05
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
 // Load configuration
