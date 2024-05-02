@@ -35,6 +35,7 @@ Requirements
   - php7-cli 
   - php7-mod-json 
   - php7-mod-curl
+  - zoneinfo-europe (for Europe)
 * Cron or any service that allows executing the control.php periodically
 
 Installation
@@ -44,6 +45,6 @@ Installation
 3. Adapt config.php to suit reflect the environment that you want to control.
 4. Install a cronjob like the following or otherwise ensure that the script executes periodically:
   ```
-  */10 * * * * /path/to/php-cli /path/to/sotacol/control.php
+  */10 * * * * /path/to/php-cli /path/to/sotacol/control.php --execute
   ```
  5. Run `php-cli control.php -h` to see the help page to manually execute commands for testing and debugging.
