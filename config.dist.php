@@ -76,8 +76,8 @@ define('TAHOMA_DEVICES',  [
 		'id' => 'io://0000-0000-0000/0000002',
         'rules' => [
 			'gust > 90' => 'up',
-			'hour >= 9 && temperature > 20' => 'down',
-			'hour >= 16 && temperature < 20' => 'my',
+			'!moved && hour >= 9 && temperature > 20' => 'down',
+			'moved && hour >= 16 && temperature < 20' => 'my',
 		 ],
 	],
 	[
@@ -110,6 +110,4 @@ define('TAHOMA_DEVICES',  [
 // Write permission needed
 define('CACHE_DIR', '/tmp');
 
-// Directory to store log file sotaco.log 
-// Write permission needed
-define('LOG_DIR', '/tmp');
+
