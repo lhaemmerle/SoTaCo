@@ -2,6 +2,12 @@
 // Set timezone where the Tahoma device is located
 define('TIMEZONE', 'Europe/Zurich');
 
+// Set geographical longitude of the home to control, needed to calculat sunrise and sunset
+define('LONGITUDE', '8.5391');
+
+// Set geographical latitude of the home to control, needed to calculat sunrise and sunset
+define('LATITUDE', '47.3686');
+
 // Meteo Schweiz CSV file updated every 10min
 define('WEATHER_DATA_URL', 'https://data.geo.admin.ch/ch.meteoschweiz.messwerte-aktuell/VQHA80.csv');
 
@@ -30,9 +36,13 @@ define('TAHOMA_TOKEN', '01234567890123456789');
 // gust        Current gust (max. wind speed) in km/h
 // radiation   Current sun radiation in W/m2
 // rain        Current rainfall in mm/10min
-// moved       Blind was already moved today (true or false)
-// down        Blind is extended (true or false)
-// up          Blind is retracted (true or false)
+//
+// The following boolean (true or false) parameters can be use:
+// moved       Blind was already moved today
+// down        Blind is extended
+// up          Blind is retracted
+// sunrise     Current time is after local sunrise
+// sunset      Current time is after local sunset
 //
 // the following operators can be used:
 // >           Greater than
@@ -100,6 +110,6 @@ define('TAHOMA_DEVICES',  [
 // Write permission needed
 define('CACHE_DIR', '/tmp');
 
-// Directory to store log file 
+// Directory to store log file sotaco.log 
 // Write permission needed
 define('LOG_DIR', '/tmp');

@@ -1,6 +1,6 @@
 <?php
-// Somfy Controller v0.6
-// Date: 2024-03-05
+// Somfy Controller v0.7
+// Date: 2024-05-02
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
 // Load configuration
@@ -28,6 +28,11 @@ $day = (date('w') + 1);
 $month = date('n');
 $week = preg_replace('/0/', '', date('W'));
 $yearday = (date('z') + 1);
+$sunInfo = date_sun_info(time(), LATITUDE, LONGITUDE);
+$sunriseTimestamp = $sunInfo['sunrise'];
+$sunsetTimestamp = $sunInfo['sunset'];
+$sunrise = (time() > $sunriseTimestamp);
+$sunset = (time() > $sunsetTimestamp);
 
 // How help
 if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
@@ -177,6 +182,8 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
                 // Execute command
                 $result = sendCommand($device['id'], $action);
                 printValueIfOnDebug($result);
+
+                echo date('Y-m-d H:i:s')." Executed action '{$action}' for blind '{$device['name']}'\n";
 
                 // Wait for some time before issueing next command
                 // Not sure if this is needed
