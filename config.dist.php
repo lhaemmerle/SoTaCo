@@ -36,9 +36,10 @@ define('TAHOMA_TOKEN', '01234567890123456789');
 // gust        Current gust (max. wind speed) in km/h
 // radiation   Current sun radiation in W/m2
 // rain        Current rainfall in mm/10min
+// moved       Number of times blind was moved by either rule (0-100) today
+// executed    Number of times current rule was executed (0-100) today
 //
 // The following boolean (true or false) parameters can be use:
-// moved       Blind was already moved today
 // down        Blind is extended
 // up          Blind is retracted
 // sunrise     Current time is after local sunrise

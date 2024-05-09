@@ -40,6 +40,7 @@ $sunriseTimestamp = $sunInfo['sunrise'];
 $sunsetTimestamp = $sunInfo['sunset'];
 $sunrise = (time() > $sunriseTimestamp);
 $sunset = (time() > $sunsetTimestamp);
+$today = date('Ymd');
 
 // How help
 if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
@@ -137,14 +138,6 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             if ($configuredDevice['id'] == $device['id']){
                 $infrastructure[$i]['up'] = $device['up'];
                 $infrastructure[$i]['down'] = $device['down'];
-
-                // Set moved to true if it was moved today
-                if (isset($stateData[$i]['lastMoved']) && $stateData[$i]['lastMoved'] == date('Ymd')){
-                    $infrastructure[$i]['moved'] = true;
-                } else {
-                    $infrastructure[$i]['moved'] = false;
-                }
-
                 $stateData[$i]['name'] = $device['name'];
                 $stateData[$i]['id'] = $device['id'];
             }
@@ -167,8 +160,9 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             // Set device specific variables
             $up = $device['up'];
             $down = $device['down'];
-            $moved = $device['moved'];
+            list($moved, $executed) = getRuleCounters($stateData, $condition, $today);
 
+            // Create expression of condition
             $expresssion = getSanitizedExpression($condition);
 
             printValueIfOnDebug("Condition to test for '{$device['name']}' to set action '{$action}': ".$condition);
@@ -196,8 +190,17 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
                 // Not sure if this is needed
                 usleep(500000);
 
-                // @todo: Set moved if blind was moved by this program
-                $stateData[$i]['lastMoved'] = date('Ymd');
+                // Clean old state of past days
+                if (!isset($stateData[$i]['executedRules'][$today])){
+                    $stateData[$i]['executedRules'] = [];
+                }
+
+                // Increase counter of rules executed
+                if (isset($stateData[$i]['executedRules'][$today][$condition])){
+                    $stateData[$i]['executedRules'][$today][$condition]++;
+                } else {
+                    $stateData[$i]['executedRules'][$today][$condition] = 1;
+                }
             } else {
                 echo date('Y-m-d H:i:s')." Dry Run: Would execute action '{$action}' for blind '{$device['name']}'\n";
             }
@@ -601,6 +604,7 @@ function getAlloweVariables(){
     $allowedVariables[] = 'radiation';
     $allowedVariables[] = 'rain';
     $allowedVariables[] = 'moved';
+    $allowedVariables[] = 'executed';
     $allowedVariables[] = 'down';
     $allowedVariables[] = 'up';
 
@@ -645,4 +649,44 @@ function getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust, $hour
     $txt .=  "- Wind speed: $wind km/h\n";
     $txt .=  "- Gust speed: $gust km/h\n";
     return $txt;
+}
+
+
+/**
+ * Return counter values for moved and executed
+ * 
+ * @param array State data
+ * @param string $currentCondition Current rule that is processed
+ * @param string $date YYYYMMDD current 
+ * @return array
+ */
+function getRuleCounters($stateData, $currentCondition, $date){
+
+    // Set defaults
+    $moved = 0;
+    $executed = 0;
+
+    // Return default value if no state data exists
+    if (!$stateData || empty($stateData)){
+        return [$moved, $executed];
+    }
+
+    // Return default value if no state data exists for given date
+    if (!isset($stateData[$i]['executedRules'][$date])){
+        return [$moved, $executed];
+    }
+
+    $executedRulesCounters = $stateData[$i]['executedRules'][$date];
+    foreach ($executedRulesCounters as $condition => $counter){
+        // Add all moves
+        $moved += $counter;
+
+        // Get counter of current condition
+        if ($condition == $currentCondition){
+            $executed = $counter;
+        }
+
+    }
+
+    return [$moved, $executed];
 }
