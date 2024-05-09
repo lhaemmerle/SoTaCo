@@ -1,17 +1,24 @@
 <?php
-// Somfy Controller v0.7
+// Somfy Controller v0.8
 // Date: 2024-05-02
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
+// Get command options
+$longOpts = ['identify:','name:','value:', 'weather', 'temperature:', 'wind:', 'gust:', 'rain:', 'radiation:', 'hour:', 'minute:', 'execute', 'cache', 'debug'];
+$opts = getopt('c:d:u:m:i::h', $longOpts);
+
 // Load configuration
-include('config.php');
+$configFile = isset($opts['c']) ? $opts['c'] : 'config.php';
+if (!file_exists($configFile) || !is_readable($configFile)){
+    echo "ERROR: Cannot load configuration file $configFile!\n";
+    exit(1);
+} else {
+    // Load default file
+    require($configFile);
+}
 
 // Set timezone
 date_default_timezone_set(TIMEZONE);
-
-// Get command options
-$longOpts = ['identify:','name:','value:', 'weather', 'temperature:', 'wind:', 'gust:', 'rain:', 'radiation:', 'hour:', 'minute:', 'execute', 'cache', 'debug'];
-$opts = getopt('d:u:m:i::h', $longOpts);
 
 // Set debug constanttemperature
 define('DEBUG', isset($opts['debug']));
@@ -39,7 +46,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
 
     // Check if config was loaded
     if (!defined('TAHOMA_BASE_URL')){
-        echo "ERROR: No configuration file config.php found in this directory!\n\n";
+        echo "ERROR: TAHOMA_BASE_URL is not set in configuration file $configFile! Is this a valid configuration file?\n\n";
     }
 
     showHelp(TAHOMA_DEVICES);
@@ -433,6 +440,7 @@ Controls blinds manually or automatically and retrieve information from Tahoma a
 
 Options:
 -h                  Show help page
+-c <file>           Path to config file. Default is config.php in same directory
 -i[<deviceNumber>]  Output most relevant infrastructure information as JSON data
 -d <deviceNumber>   Extend/close blind with given deviceNumber 
 -u <deviceNumber>   Retract/open blind with given deviceNumber
