@@ -160,7 +160,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             // Set device specific variables
             $up = $device['up'];
             $down = $device['down'];
-            list($moved, $executed) = getRuleCounters($stateData, $condition, $today);
+            list($moved, $executed) = getRuleCounters($stateData[$i], $condition, $today);
 
             // Create expression of condition
             $expresssion = getSanitizedExpression($condition);
@@ -672,11 +672,11 @@ function getRuleCounters($stateData, $currentCondition, $date){
     }
 
     // Return default value if no state data exists for given date
-    if (!isset($stateData[$i]['executedRules'][$date])){
+    if (!isset($stateData['executedRules'][$date])){
         return [$moved, $executed];
     }
 
-    $executedRulesCounters = $stateData[$i]['executedRules'][$date];
+    $executedRulesCounters = $stateData['executedRules'][$date];
     foreach ($executedRulesCounters as $condition => $counter){
         // Add all moves
         $moved += $counter;
