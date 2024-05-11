@@ -10,8 +10,7 @@ $opts = getopt('c:d:u:m:i::h', $longOpts);
 // Load configuration
 $configFile = isset($opts['c']) ? $opts['c'] : 'config.php';
 if (!file_exists($configFile) || !is_readable($configFile)){
-    echo "ERROR: Cannot load configuration file $configFile!\n";
-    exit(1);
+    printErrorAndExit("Cannot load configuration file $configFile!");
 } else {
     // Load default file
     require($configFile);
@@ -47,7 +46,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
 
     // Check if config was loaded
     if (!defined('TAHOMA_BASE_URL')){
-        echo "ERROR: TAHOMA_BASE_URL is not set in configuration file $configFile! Is this a valid configuration file?\n\n";
+	printErrorAndExit("TAHOMA_BASE_URL is not set in configuration file $configFile! Is this a valid configuration file?");
     }
 
     showHelp(TAHOMA_DEVICES);
@@ -581,8 +580,8 @@ function checkAction($action){
  * @param string $message
  */
 function printErrorAndExit($message){
-    echo '###ERROR: '.$message."\n";
-    exit;
+    echo '###ERROR: '.date('d. m. Y H:i:s').' - '.$message."\n";
+    exit(1);
 }
 
 /**
