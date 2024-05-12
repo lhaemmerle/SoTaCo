@@ -8,7 +8,7 @@ $longOpts = ['identify:','name:','value:', 'weather', 'temperature:', 'wind:', '
 $opts = getopt('c:d:u:m:i::h', $longOpts);
 
 // Load configuration
-$configFile = isset($opts['c']) ? $opts['c'] : 'config.php';
+$configFile = isset($opts['c']) ? $opts['c'] : __DIR__ . 'config.php';
 if (!file_exists($configFile) || !is_readable($configFile)){
     printErrorAndExit("Cannot load configuration file $configFile!");
 } else {
