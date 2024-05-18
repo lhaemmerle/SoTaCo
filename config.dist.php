@@ -47,7 +47,7 @@ define('TAHOMA_TOKEN', '01234567890123456789');
 //
 // the following operators can be used:
 // >           Greater than
-// =>          Equal or greater than
+// >=          Equal or greater than
 // <           Smaller than
 // <=          Equal or smaller than
 // ==          Equal
