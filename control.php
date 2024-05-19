@@ -1,6 +1,6 @@
 <?php
-// Somfy Controller v0.8
-// Date: 2024-05-02
+// Somfy Controller v0.9
+// Date: 2024-05-19
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
 // Get command options
@@ -8,13 +8,15 @@ $longOpts = ['identify:','name:','value:', 'weather', 'temperature:', 'wind:', '
 $opts = getopt('c:d:u:m:i::h', $longOpts);
 
 // Load configuration
-$configFile = isset($opts['c']) ? $opts['c'] : __DIR__ . 'config.php';
+$configFile = isset($opts['c']) ? $opts['c'] : __DIR__ . '/config.php';
 if (!file_exists($configFile) || !is_readable($configFile)){
     printErrorAndExit("Cannot load configuration file $configFile!");
 } else {
     // Load default file
     require($configFile);
 }
+
+
 
 // Set timezone
 date_default_timezone_set(TIMEZONE);
@@ -167,7 +169,13 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             printValueIfOnDebug("Condition to test for '{$device['name']}' to set action '{$action}': ".$condition);
 
             // Execute expression
-            $conditionEvaluationResult = eval($expresssion);
+            try {
+                $conditionEvaluationResult = @eval($expresssion);
+            }  catch (Throwable $t) {
+                printError("Invalid condition ('".$condition."') in rule for device '{$device['name']}'");
+                continue;
+            }
+
             printValueIfOnDebug("- Result: ".($conditionEvaluationResult ? 'true' : 'false'));
 
             // Condition is not met
@@ -575,12 +583,21 @@ function checkAction($action){
 }
 
 /**
+ * Prints an error
+ * 
+ * @param string $message
+ */
+function printError($message){
+    echo '###ERROR: '.date('d. m. Y H:i:s').' - '.$message."\n";
+}
+
+/**
  * Prints an error and exits
  * 
  * @param string $message
  */
 function printErrorAndExit($message){
-    echo '###ERROR: '.date('d. m. Y H:i:s').' - '.$message."\n";
+    printError($message);
     exit(1);
 }
 
