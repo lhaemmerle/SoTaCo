@@ -14,7 +14,7 @@ define('WEATHER_DATA_URL', 'https://data.geo.admin.ch/ch.meteoschweiz.messwerte-
 // Meteo Schweiz abbreviation for weather station
 // Get the abbreviation from map from https://www.meteoswiss.admin.ch/services-and-publications/applications/measurement-values-and-measuring-networks.html
 // The current example is "Aadorf / Tänikon" = TAE
-define('WEATHER_STATION_ID', 'TAE');
+define('WEATHER_STATION_ID', 'SMA');
 
 // Base URL to the local Tahoma API 	
 define('TAHOMA_BASE_URL', 'https://gateway-#TAHOMA-PIN#.lan:8443');
@@ -65,50 +65,60 @@ define('TAHOMA_TOKEN', '01234567890123456789');
 // Note: Only the first of potentially serveral rules is executed even if 
 //       the conditions of several rules are met 
 define('TAHOMA_DEVICES',  [
+	/*
+	// Example rules
     [
 		'name' => 'Children',
 		'id' => 'io://0000-0000-0000/0000001',
         'rules' => [
-			'wind > 80' => 'up',
+			'wind > 50' => 'up',
+			'gust > 90' => 'up',
+			'hour >= 7 && hour <= 12 && temperature >= 20 && radiation > 500' => 'down',
+			'moved && hour >= 13' => 'my',
 		 ],
 	],
 	[
 		'name' => 'Kitchen',
 		'id' => 'io://0000-0000-0000/0000002',
         'rules' => [
+			'wind > 50' => 'up',
 			'gust > 90' => 'up',
-			'!moved && hour >= 9 && temperature > 20' => 'down',
-			'moved && hour >= 16 && temperature < 20' => 'my',
+			'hour >= 7 && hour <= 12 && temperature >= 20 && radiation > 500' => 'down',
+			'moved && hour >= 13' => 'up',
 		 ],
 	],
 	[
 		'name' => 'Parents',
 		'id' => 'io://0000-0000-0000/0000003',
         'rules' => [
-			'wind > 80' => 'up',
-			'hour >= 16 && temperature > 5' => 'up',
+			'wind > 50' => 'up',
+			'gust > 90' => 'up',
+			'hour >= 13 && hour <= 20 && temperature >= 20 && radiation > 500' => 'down',
+			'moved > 8 && hour >= 21' => 'my',			
 		],
 	],
     [
 		'name' => 'Balcony',
 		'id' => 'io://0000-0000-0000/0000004',
         'rules' => [
-			'wind > 80' => 'up',
+			'rain > 0.2' => 'up',
+			'wind > 30' => 'up',
+			'gust > 40' => 'up',
 		],
 	],
     [
 		'name' => 'Guestroom',
 		'id' => 'io://0000-0000-0000/0000005',
         'rules' => [
+			'gust > 90' => 'up',
 			'wind > 80' => 'up',
 			'temperature > 20 && radiation > 300' => 'down',
 			'(hour >= 13 && hour < 20) || temperature > 20 && radiation > 400' => 'down',
 		],
 	],
+	*/
 ]);
 
 // Directory to store cached files. 
 // Write permission needed
 define('CACHE_DIR', '/tmp');
-
-
