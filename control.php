@@ -4,7 +4,11 @@
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
 // Get command options
-$longOpts = ['identify:','name:','value:', 'weather', 'temperature:', 'wind:', 'gust:', 'rain:', 'radiation:', 'hour:', 'minute:', 'execute', 'cache', 'debug'];
+$longOpts = [
+    'identify:','name:','value:', 'weather', 'temperature:', 'wind:', 
+    'gust:', 'rain:', 'radiation:', 'hour:', 'minute:', 'execute', 
+    'command:', 'device:', 'parameter1:', 'parameter2:', 'cache', 'debug'
+];
 $opts = getopt('c:d:u:m:i::h', $longOpts);
 
 // Load configuration
@@ -15,8 +19,6 @@ if (!file_exists($configFile) || !is_readable($configFile)){
     // Load default file
     require($configFile);
 }
-
-
 
 // Set timezone
 date_default_timezone_set(TIMEZONE);
@@ -48,7 +50,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
 
     // Check if config was loaded
     if (!defined('TAHOMA_BASE_URL')){
-	printErrorAndExit("TAHOMA_BASE_URL is not set in configuration file $configFile! Is this a valid configuration file?");
+	    printErrorAndExit("TAHOMA_BASE_URL is not set in configuration file $configFile! Is this a valid configuration file?");
     }
 
     showHelp(TAHOMA_DEVICES);
@@ -75,6 +77,20 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
     exit;
 } else if (isset($opts['identify']) && isInteger($opts['identify'])){
     $result = sendCommand(TAHOMA_DEVICES[$opts['identify']]['id'], 'identify');
+    printValueIfOnDebug($result);
+    exit;
+} else if (isset($opts['command']) && is_string($opts['command'])){
+    // Ensure device number is present
+    if (!isset($opts['device'])){
+        printErrorAndExit("Parameter --device <deviceNumber> is missing");
+    }
+
+    // Get parameters
+    $param1  = $opts['parameter1'] ?? null;
+    $param2  = $opts['parameter2'] ?? null;
+
+    // Send command
+    $result = sendCommand(TAHOMA_DEVICES[$opts['device']]['id'], $opts['command'], $param1, $param2);
     printValueIfOnDebug($result);
     exit;
 } else if (isset($opts['name']) && isInteger($opts['name']) && isset($opts['value'])){
@@ -273,6 +289,7 @@ function getDeviceData($deviceID = '', $cached = false){
         }
 
         $device = [];
+        $device['deviceNumber'] = getDeviceNumber($result[$i]->deviceURL) ?? null;
 		$device['name'] = $result[$i]->label;
 		$device['id'] = $result[$i]->deviceURL;		
 		$device['type'] = $result[$i]->definition->widgetName;		
@@ -305,30 +322,38 @@ function getDeviceData($deviceID = '', $cached = false){
  * Send a command with optional parameters to device with given deviceID
  * @param string $deviceID
  * @param string $command
- * @param string $parameter
+ * @param string $parameter1
+ * @param string $parameter2
  * @return string 
  */
-function sendCommand($deviceID, $command, $parameter = ''){
+function sendCommand($deviceID, $command, $parameter1 = 0, $parameter2 = 0){
 	$requestURL = TAHOMA_BASE_URL.'/enduser-mobile-web/1/enduserAPI/exec/apply';
 
-    $command = ['name' => $command];
-    if($parameter !== ''){
-        $command['parameters'] = [$parameter];
+    // Set command name
+    $commandObj = ['name' => $command];
+
+    // Set parameters
+    if($parameter1 && $parameter2){
+        $commandObj['parameters'] = [$parameter1, $parameter2];
+    } else if($parameter1 ){
+        $commandObj['parameters'] = [$parameter1];
     }
 
+    // Compose object as associative array
     $request = [
         'label' => 'myAction',
         'actions' => [
             [
                 'commands' => [
-                    $command
+                    $commandObj
                 ],
                 'deviceURL' => $deviceID,
             ],
         ],
     ];
 
-    $httpPayload = json_encode($request, JSON_PRETTY_PRINT);
+    // Convert to JSON
+    $httpPayload = json_encode($request, JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
     printValueIfOnDebug($httpPayload);
 
 	$curl = curl_init();
@@ -496,6 +521,13 @@ Identify given device (i.e. make it wink)
 
 --name <deviceNumber> --value <string> 
 Set name for device. Apparently limit is 17 characters
+
+--command <string> --device <deviceNumber>  [--parameter1 <value> [--parameter2 <value>]]
+Send an execute command directly for a device. 
+
+###########################################
+#### BE CAREFUL. USE AT YOUR OWN RISK! ####
+###########################################
 
 Device Numbers:
 {$deviceList}
@@ -705,4 +737,17 @@ function getRuleCounters($stateData, $currentCondition, $date){
     }
 
     return [$moved, $executed];
+}
+
+/**
+ * Find device number
+ * @param string $deviceURL
+ * @return int
+ */
+function getDeviceNumber($deviceURL){
+    foreach(TAHOMA_DEVICES as $k => $info){
+        if ($deviceURL == $info['id']){
+            return $k;
+        }
+    }
 }
