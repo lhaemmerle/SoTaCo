@@ -1,6 +1,6 @@
 <?php
-// Somfy Controller v0.9
-// Date: 2024-05-19
+// Somfy Controller v1.0
+// Date: 2024-06-07
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
 // Get command options
@@ -296,9 +296,11 @@ function getDeviceData($deviceID = '', $cached = false){
 		
 		foreach ($result[$i]->states as $state){
 			if ($state->name == 'core:ManufacturerSettingsState'){
-				$device['position'] = $state->value->current_position;		
+				$device['position'] = $state->value->current_position;
+				$device['positionPercentage'] = round($state->value->current_position/512);
                 if (isset($state->value->current_tilt)){
 				    $device['tilt'] = $state->value->current_tilt;
+				    $device['tiltPercentage'] = round($state->value->current_tilt/512);
                 } else {
                     $device['tilt'] = null;
                 }
@@ -326,16 +328,16 @@ function getDeviceData($deviceID = '', $cached = false){
  * @param string $parameter2
  * @return string 
  */
-function sendCommand($deviceID, $command, $parameter1 = 0, $parameter2 = 0){
+function sendCommand($deviceID, $command, $parameter1 = '', $parameter2 = ''){
 	$requestURL = TAHOMA_BASE_URL.'/enduser-mobile-web/1/enduserAPI/exec/apply';
 
     // Set command name
     $commandObj = ['name' => $command];
 
     // Set parameters
-    if($parameter1 && $parameter2){
+    if($parameter1 !== '' && $parameter2 !== ''){
         $commandObj['parameters'] = [$parameter1, $parameter2];
-    } else if($parameter1 ){
+    } else if($parameter1 !== ''){
         $commandObj['parameters'] = [$parameter1];
     }
 
