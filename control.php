@@ -1,6 +1,6 @@
 <?php
-// Somfy Controller v1.0
-// Date: 2024-06-07
+// Somfy Controller v1.0.1
+// Date: 2024-07-09
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
 // Get command options
