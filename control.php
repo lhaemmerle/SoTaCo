@@ -648,11 +648,14 @@ function getAlloweVariables(){
     $allowedVariables[] = 'month';
     $allowedVariables[] = 'week';
     $allowedVariables[] = 'yearday';
+    $allowedVariables[] = 'today';
     $allowedVariables[] = 'temperature';
     $allowedVariables[] = 'wind';
     $allowedVariables[] = 'gust';
     $allowedVariables[] = 'radiation';
     $allowedVariables[] = 'rain';
+    $allowedVariables[] = 'sunset';
+    $allowedVariables[] = 'sunrise';
     $allowedVariables[] = 'moved';
     $allowedVariables[] = 'executed';
     $allowedVariables[] = 'down';
