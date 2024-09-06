@@ -1,12 +1,12 @@
 <?php
-// Somfy Controller v1.0.1
-// Date: 2024-07-09
+// Somfy Controller v1.1
+// Date: 2024-09-06
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
 // Get command options
 $longOpts = [
     'identify:','name:','value:', 'weather', 'temperature:', 'wind:', 
-    'gust:', 'rain:', 'radiation:', 'hour:', 'minute:', 'execute', 
+    'gust:', 'rain:', 'radiation:', 'sunshine:', 'hour:', 'minute:', 'execute', 
     'command:', 'device:', 'parameter1:', 'parameter2:', 'cache', 'debug'
 ];
 $opts = getopt('c:d:u:m:i::h', $longOpts);
@@ -100,9 +100,17 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
     exit;
 } else if (isset($opts['weather'])){
 
+    // Get state information
+    $stateData = getStateData();
+
+    // Add at least one value
+    addWeatherValues($stateData, $temperature, $radiation, $sunshine);
+
     // Get weather data
-    list($temperature, $rain, $radiation, $wind, $gust) = getWeatherData(CACHED);
-    echo getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust, $hour, $minute);
+    list($temperature, $rain, $radiation, $sunshine, $wind, $gust) = getWeatherData(CACHED);
+    list($temperature3day, $radiation3day, $sunshine3day) = getWheaterAverage($stateData);
+    echo getWeatherDataInfo($temperature, $temperature3day, $rain, $radiation, $radiation3day, $sunshine, $sunshine3day, $wind, $gust, $hour, $minute);
+
     exit;
 } else {
     // Automatically control blinds
@@ -111,7 +119,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
     $devices = getDeviceData('', CACHED);
 
     // Get weather data
-    list($temperature, $rain, $radiation, $wind, $gust) = getWeatherData(CACHED);
+    list($temperature, $rain, $radiation, $sunshine, $wind, $gust) = getWeatherData(CACHED);
 
     // Overwrite weather data
     if (isset($opts['temperature']) && is_numeric($opts['temperature'])){
@@ -122,6 +130,9 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
     }
     if (isset($opts['radiation']) && is_numeric($opts['radiation'])){
         $radiation = $opts['radiation'];   
+    }
+    if (isset($opts['sunshine']) && is_numeric($opts['sunshine'])){
+        $radiation = $opts['sunshine'];   
     }
     if (isset($opts['wind']) && is_numeric($opts['wind'])){
         $wind = $opts['wind'];   
@@ -139,24 +150,26 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
     }
 
     // Compose weather debug information
-    printValueIfOnDebug(getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust, $hour, $minute));
+    printValueIfOnDebug(getWeatherDataInfo($temperature, $temperature3day, $rain, $radiation, $radiation3day, $sunshine, $sunshine3day, $wind, $gust, $hour, $minute));
 
     // Get state information
-    if (is_file(CACHE_DIR.'/sotaco-state-data.json')){
-        $stateDataJSON = file_get_contents(CACHE_DIR.'/sotaco-state-data.json');
-        $stateData = json_decode($stateDataJSON, true);
-    } else {
-        $stateData = [];
-    }
+    $stateData = getStateData();
 
+    // Store temperature and radation for past few days
+    addWeatherValues($stateData, $temperature, $radiation, $sunshine);
+
+    // Get state data
+    list($temperature3day, $radiation3day, $sunshine3day) = getWheaterAverage($stateData);
+
+    // Store device data
     $infrastructure = TAHOMA_DEVICES;
     foreach ($devices as $device){
         foreach($infrastructure as $i => $configuredDevice){
             if ($configuredDevice['id'] == $device['id']){
                 $infrastructure[$i]['up'] = $device['up'];
                 $infrastructure[$i]['down'] = $device['down'];
-                $stateData[$i]['name'] = $device['name'];
-                $stateData[$i]['id'] = $device['id'];
+                $stateData['devices'][$i]['name'] = $device['name'];
+                $stateData['devices'][$i]['id'] = $device['id'];
             }
         }
     }
@@ -177,7 +190,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             // Set device specific variables
             $up = $device['up'];
             $down = $device['down'];
-            list($moved, $executed) = getRuleCounters($stateData[$i], $condition, $today);
+            list($moved, $executed) = getRuleCounters($stateData['devices'][$i], $condition, $today);
 
             // Create expression of condition
             $expresssion = getSanitizedExpression($condition);
@@ -214,15 +227,15 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
                 usleep(500000);
 
                 // Clean old state of past days
-                if (!isset($stateData[$i]['executedRules'][$today])){
-                    $stateData[$i]['executedRules'] = [];
+                if (!isset($stateData['devices'][$i]['executedRules'][$today])){
+                    $stateData['devices'][$i]['executedRules'] = [];
                 }
 
                 // Increase counter of rules executed
-                if (isset($stateData[$i]['executedRules'][$today][$condition])){
-                    $stateData[$i]['executedRules'][$today][$condition]++;
+                if (isset($stateData['devices'][$i]['executedRules'][$today][$condition])){
+                    $stateData['devices'][$i]['executedRules'][$today][$condition]++;
                 } else {
-                    $stateData[$i]['executedRules'][$today][$condition] = 1;
+                    $stateData['devices'][$i]['executedRules'][$today][$condition] = 1;
                 }
             } else {
                 echo date('Y-m-d H:i:s')." Dry Run: Would execute action '{$action}' for blind '{$device['name']}'\n";
@@ -381,7 +394,7 @@ function sendCommand($deviceID, $command, $parameter1 = '', $parameter2 = ''){
 }
 
 /**
- * Return temperature, rain, global radiation, wind, gust as numbers.
+ * Return temperature, rain, global radiation, sunshine, wind, gust as numbers.
  * Use cached version if available
  * 
  * @param boolean $cached
@@ -451,6 +464,7 @@ function getWeatherData($cached = false){
                 filter_var($components[2], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
                 filter_var($components[3], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
                 filter_var($components[5], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
+                filter_var($components[4], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
                 filter_var($components[9], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
                 filter_var($components[10], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION)
             ];
@@ -459,7 +473,7 @@ function getWeatherData($cached = false){
     }
 
     // Return default values
-    return [0, 0, 0, 0, 0];
+    return [0, 0, 0, 0, 0, 0];
 }
 
 /**
@@ -508,6 +522,9 @@ Set wind (gust) in km/h instead of reading it from weather data
 --radation <float>
 Set radiation in W/m² instead of reading it from weather data
 
+--sunshine <float>
+Set sunshine duration in minutes within last 10 min period instead of reading it from weather data
+
 --hour <int>
 Set current hour of today
 
@@ -552,7 +569,8 @@ Set name for device
 
 php controlBlinds.php \
     [--temperature <float>] [--wind <float>] [--gust <float>] [--rain <float>] \
-    [--radiation <float>] [--temperature <float>] [--hour <int>]  [--hour <int>] [--execute] [--debug]
+    [--radiation <float>] [--sunshine <float>] [--temperature <float>] \
+    [--hour <int>]  [--hour <int>] [--execute] [--debug]
 Control blinds automatically, overwrite weather data with given weather values if available.
 The blinds are only moved for real if the parameter --execute is added.
 
@@ -642,6 +660,9 @@ function printErrorAndExit($message){
  */
 function getAlloweVariables(){
     $allowedVariables = [];
+    $allowedVariables[] = 'temperature3day';
+    $allowedVariables[] = 'radiation3day';
+    $allowedVariables[] = 'sunshine3day';
     $allowedVariables[] = 'hour';
     $allowedVariables[] = 'minute';
     $allowedVariables[] = 'day';
@@ -653,6 +674,7 @@ function getAlloweVariables(){
     $allowedVariables[] = 'wind';
     $allowedVariables[] = 'gust';
     $allowedVariables[] = 'radiation';
+    $allowedVariables[] = 'sunshine';
     $allowedVariables[] = 'rain';
     $allowedVariables[] = 'sunset';
     $allowedVariables[] = 'sunrise';
@@ -676,10 +698,73 @@ function getSanitizedExpression($condition){
     $expression = $condition;
     $variables = getAlloweVariables();
     foreach ($variables as $variable){
-        $expression = preg_replace('/'.$variable.'/', '$'.$variable, $expression);
+        $expression = preg_replace('/([^a-z0-9])'.$variable.'([^a-z0-9])/', '\1$'.$variable.'\2', $expression);
     }
 
     return 'return ('.$expression.');';
+}
+
+/**
+ * Stores temperature and radiation weather data for past few days 
+ * in a rolling array to calculate average.
+ * 
+ * @param array $stateData
+ * @param float $temperature
+ * @param float $radiation
+ * @param float $sunshine
+ */
+function addWeatherValues(&$stateData, $temperature, $radiation, $sunshine){
+    // Add current values for current hour if no value exists yet
+    $timestamp = date('YmdH');
+    if (!isset($stateData['weather'][$timestamp])){
+       $stateData['weather'][$timestamp] = [$temperature, $radiation, $sunshine];
+    }
+
+    // Remove elements older than 3 days
+    foreach ($stateData['weather'] as $timestamp => $data){
+        if ($timestamp < date('YmdH', time() - 3*86400)){
+           unset($stateData['weather'][$timestamp]);
+        }
+    }
+}
+
+/**
+ * Retrives average weather values of last hours 
+ * 
+ * @param array $stateData
+ * @param int $hours
+ * @return array
+ */
+function getWheaterAverage($stateData, $hours = 72){
+    $sumTemperperature = 0;
+    $sumRadiation = 0;
+    $sumSunshine = 0;
+    $temperatureValues = [];
+    $radiationValues = [];
+    $sunshineValues = [];
+
+    foreach ($stateData['weather'] as $timestamp => $data){
+        if ($timestamp < date('YmdH', time() - $hours*3600)){
+            continue;
+        }
+
+        list($temperature, $radiation, $sunshine) = $data;
+
+        $sumTemperperature += $temperature;
+        $sumRadiation += $radiation;
+        $sumSunshine += $sunshine;
+        $temperatureValues[] = $temperature;
+        $radiationValues[] = $radiation;
+        $sunshineValues[] = $sunshine;
+    
+    }
+
+    return [
+        $sumTemperperature/count($temperatureValues), 
+        $sumRadiation/count($radiationValues), 
+        $sumSunshine/count($sunshineValues)
+    ];
+
 }
 
 /**
@@ -688,17 +773,22 @@ function getSanitizedExpression($condition){
  * @param float $temperature
  * @param float $rain
  * @param float $radiation
+ * @param float $sunshine
  * @param float $wind
  * @param float $gust
  * @param int $hour
  * @param int $minute
  */
-function getWeatherDataInfo($temperature, $rain, $radiation, $wind, $gust, $hour, $minute){
+function getWeatherDataInfo($temperature, $temperature3day, $rain, $radiation, $radiation3day, $sunshine, $sunshine3day, $wind, $gust, $hour, $minute){
     $txt = "Time: $hour:$minute\n";
     $txt .= "Current weather data:\n";
     $txt .=  "- Temperature: $temperature °C\n";
+    $txt .=  "- 3-day average temperature: $temperature3day °C\n";
     $txt .=  "- Rainfall: $rain mm/10min\n";
     $txt .=  "- Global sun radiation: $radiation W/m²\n";
+    $txt .=  "- 3-day average  global sun radiation: $radiation3day W/m²\n";
+    $txt .=  "- Sunshine: $sunshine min duration within last 10min\n";
+    $txt .=  "- 3-day average sunshine: $sunshine3day min duration within last 10min\n";
     $txt .=  "- Wind speed: $wind km/h\n";
     $txt .=  "- Gust speed: $gust km/h\n";
     return $txt;
@@ -755,4 +845,20 @@ function getDeviceNumber($deviceURL){
             return $k;
         }
     }
+}
+
+/**
+ * Returns state data
+ * 
+ * @return array
+ */
+function getStateData(){
+    if (is_file(CACHE_DIR.'/sotaco-state-data.json')){
+        $stateDataJSON = file_get_contents(CACHE_DIR.'/sotaco-state-data.json');
+        $stateData = json_decode($stateDataJSON, true);
+    } else {
+        $stateData = [];
+    }
+
+    return $stateData;
 }

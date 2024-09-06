@@ -32,9 +32,13 @@ define('TAHOMA_TOKEN', '01234567890123456789');
 // week        Current week (1-52)
 // yearday     Current day of the year (1-366)
 // temperature Current temperature
+// temperature3day 3-day average termperature
 // wind        Current wind speed in km/h
 // gust        Current gust (max. wind speed) in km/h
 // radiation   Current sun radiation in W/m2
+// radiation3day 3-day average global radiation
+// sunshine    Minutes of sunshine in the last 10 minutes
+// sunshine3day 3-day average sunshine
 // rain        Current rainfall in mm/10min
 // moved       Number of times blind was moved by either rule (0-100) today
 // executed    Number of times current rule was executed (0-100) today
