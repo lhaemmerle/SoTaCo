@@ -31,14 +31,14 @@ define('TAHOMA_TOKEN', '01234567890123456789');
 // month       Current month  (1-12)
 // week        Current week (1-52)
 // yearday     Current day of the year (1-366)
-// temperature Current temperature
-// temperature3day 3-day average termperature
+// temperature Current temperature in degree Celsius
+// temp3day    3 day average temperature in degree Celsius
 // wind        Current wind speed in km/h
 // gust        Current gust (max. wind speed) in km/h
 // radiation   Current sun radiation in W/m2
-// radiation3day 3-day average global radiation
-// sunshine    Minutes of sunshine in the last 10 minutes
-// sunshine3day 3-day average sunshine
+// rad3day     3 day average radiation in W/m2
+// sunshine    Sunshine duration in minutes per 10 minutes
+// sun3days    3 day average sunshine duration in minutes per 10 minutes
 // rain        Current rainfall in mm/10min
 // moved       Number of times blind was moved by either rule (0-100) today
 // executed    Number of times current rule was executed (0-100) today
@@ -65,6 +65,7 @@ define('TAHOMA_TOKEN', '01234567890123456789');
 // up          Retract blind
 // down        Extend blind
 // my          Move blind to My position
+// 
 //
 // Note: Only the first of potentially serveral rules is executed even if 
 //       the conditions of several rules are met 

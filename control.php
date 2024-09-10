@@ -108,8 +108,8 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
 
     // Get weather data
     list($temperature, $rain, $radiation, $sunshine, $wind, $gust) = getWeatherData(CACHED);
-    list($temperature3day, $radiation3day, $sunshine3day) = getWheaterAverage($stateData);
-    echo getWeatherDataInfo($temperature, $temperature3day, $rain, $radiation, $radiation3day, $sunshine, $sunshine3day, $wind, $gust, $hour, $minute);
+    list($averagetemp, $averagerad, $averagesun) = getWheaterAverage($stateData);
+    echo getWeatherDataInfo($temperature, $averagetemp, $rain, $radiation, $averagerad, $sunshine, $averagesun, $wind, $gust, $hour, $minute);
 
     exit;
 } else {
@@ -149,17 +149,18 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
         $minute = $opts['minute'];
     }
 
-    // Compose weather debug information
-    printValueIfOnDebug(getWeatherDataInfo($temperature, $temperature3day, $rain, $radiation, $radiation3day, $sunshine, $sunshine3day, $wind, $gust, $hour, $minute));
-
     // Get state information
     $stateData = getStateData();
+    list($averagetemp, $averagerad, $averagesun) = getWheaterAverage($stateData);
+
+    // Compose weather debug information
+    printValueIfOnDebug(getWeatherDataInfo($temperature, $averagetemp, $rain, $radiation, $averagerad, $sunshine, $averagesun, $wind, $gust, $hour, $minute));
 
     // Store temperature and radation for past few days
     addWeatherValues($stateData, $temperature, $radiation, $sunshine);
 
     // Get state data
-    list($temperature3day, $radiation3day, $sunshine3day) = getWheaterAverage($stateData);
+    list($averagetemp, $averagerad, $averagesun) = getWheaterAverage($stateData);
 
     // Store device data
     $infrastructure = TAHOMA_DEVICES;
@@ -201,6 +202,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             try {
                 $conditionEvaluationResult = @eval($expresssion);
             }  catch (Throwable $t) {
+                echo $expresssion;
                 printError("Invalid condition ('".$condition."') in rule for device '{$device['name']}'");
                 continue;
             }
@@ -611,7 +613,7 @@ function checkCondition($condition){
     $components = preg_split('/\s*('.$operators.'|[\d+\.])\s*/', $condition, 0, PREG_SPLIT_NO_EMPTY);
 
     // Set allowed variables
-    $allowedVariables = getAlloweVariables();
+    $allowedVariables = getAllowedVariables();
 
     // Check all condition components
     foreach ($components as $component){
@@ -658,11 +660,11 @@ function printErrorAndExit($message){
  * 
  * @return string[]
  */
-function getAlloweVariables(){
+function getAllowedVariables(){
     $allowedVariables = [];
-    $allowedVariables[] = 'temperature3day';
-    $allowedVariables[] = 'radiation3day';
-    $allowedVariables[] = 'sunshine3day';
+    $allowedVariables[] = 'averagetemp';
+    $allowedVariables[] = 'averagerad';
+    $allowedVariables[] = 'averagesun';
     $allowedVariables[] = 'hour';
     $allowedVariables[] = 'minute';
     $allowedVariables[] = 'day';
@@ -696,9 +698,9 @@ function getSanitizedExpression($condition){
 
     // Replace variables
     $expression = $condition;
-    $variables = getAlloweVariables();
+    $variables = getAllowedVariables();
     foreach ($variables as $variable){
-        $expression = preg_replace('/([^a-z0-9])'.$variable.'([^a-z0-9])/', '\1$'.$variable.'\2', $expression);
+        $expression = preg_replace('/'.$variable.'/', '$'.$variable.'', $expression);
     }
 
     return 'return ('.$expression.');';
@@ -779,16 +781,16 @@ function getWheaterAverage($stateData, $hours = 72){
  * @param int $hour
  * @param int $minute
  */
-function getWeatherDataInfo($temperature, $temperature3day, $rain, $radiation, $radiation3day, $sunshine, $sunshine3day, $wind, $gust, $hour, $minute){
+function getWeatherDataInfo($temperature, $averagetemp, $rain, $radiation, $averagerad, $sunshine, $averagesun, $wind, $gust, $hour, $minute){
     $txt = "Time: $hour:$minute\n";
     $txt .= "Current weather data:\n";
     $txt .=  "- Temperature: $temperature °C\n";
-    $txt .=  "- 3-day average temperature: $temperature3day °C\n";
+    $txt .=  "- 3-day average temperature: $averagetemp °C\n";
     $txt .=  "- Rainfall: $rain mm/10min\n";
     $txt .=  "- Global sun radiation: $radiation W/m²\n";
-    $txt .=  "- 3-day average  global sun radiation: $radiation3day W/m²\n";
+    $txt .=  "- 3-day average  global sun radiation: $averagerad W/m²\n";
     $txt .=  "- Sunshine: $sunshine min duration within last 10min\n";
-    $txt .=  "- 3-day average sunshine: $sunshine3day min duration within last 10min\n";
+    $txt .=  "- 3-day average sunshine: $averagesun min duration within last 10min\n";
     $txt .=  "- Wind speed: $wind km/h\n";
     $txt .=  "- Gust speed: $gust km/h\n";
     return $txt;
