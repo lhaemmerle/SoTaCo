@@ -1,6 +1,6 @@
 <?php
-// Somfy Controller v1.1
-// Date: 2024-09-06
+// Somfy Controller v1.1.1
+// Date: 2024-09-17
 // Author: Lukas Hämmerle <lukas@haemmerle.net>
 
 // Get command options
@@ -716,6 +716,12 @@ function getSanitizedExpression($condition){
  * @param float $sunshine
  */
 function addWeatherValues(&$stateData, $temperature, $radiation, $sunshine){
+
+    // Abort if values are not numbers
+    if (!is_numeric($temperature) || !is_numeric($radiation) || !is_numeric($sunshine)){
+        return;
+    }
+
     // Add current values for current hour if no value exists yet
     $timestamp = date('YmdH');
     if (!isset($stateData['weather'][$timestamp])){
@@ -762,9 +768,9 @@ function getWheaterAverage($stateData, $hours = 72){
     }
 
     return [
-        $sumTemperperature/count($temperatureValues), 
-        $sumRadiation/count($radiationValues), 
-        $sumSunshine/count($sunshineValues)
+        round($sumTemperperature/count($temperatureValues),1), 
+        round($sumRadiation/count($radiationValues),1),
+        round($sumSunshine/count($sunshineValues),1)
     ];
 
 }
