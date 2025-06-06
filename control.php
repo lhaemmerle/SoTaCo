@@ -151,16 +151,15 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
 
     // Get state information
     $stateData = getStateData();
-    list($averagetemp, $averagerad, $averagesun) = getWheaterAverage($stateData);
-
-    // Compose weather debug information
-    printValueIfOnDebug(getWeatherDataInfo($temperature, $averagetemp, $rain, $radiation, $averagerad, $sunshine, $averagesun, $wind, $gust, $hour, $minute));
 
     // Store temperature and radation for past few days
     addWeatherValues($stateData, $temperature, $radiation, $sunshine);
 
     // Get state data
     list($averagetemp, $averagerad, $averagesun) = getWheaterAverage($stateData);
+
+    // Compose weather debug information
+    printValueIfOnDebug(getWeatherDataInfo($temperature, $averagetemp, $rain, $radiation, $averagerad, $sunshine, $averagesun, $wind, $gust, $hour, $minute));
 
     // Store device data
     $infrastructure = TAHOMA_DEVICES;
@@ -307,26 +306,38 @@ function getDeviceData($deviceID = '', $cached = false){
         $device['deviceNumber'] = getDeviceNumber($result[$i]->deviceURL) ?? null;
 		$device['name'] = $result[$i]->label;
 		$device['id'] = $result[$i]->deviceURL;		
-		$device['type'] = $result[$i]->definition->widgetName;		
-		
+		$device['type'] = $result[$i]->definition->widgetName;	
+        $device['positionPercentage'] = null;
+        $device['tiltPercentage'] = null;
+        $device['myPositionPercentage'] = null;
+        $device['myTiltPercentage'] = null;
+
 		foreach ($result[$i]->states as $state){
-			if ($state->name == 'core:ManufacturerSettingsState'){
-				$device['position'] = $state->value->current_position;
-				$device['positionPercentage'] = round($state->value->current_position/512);
-                if (isset($state->value->current_tilt)){
-				    $device['tilt'] = $state->value->current_tilt;
-				    $device['tiltPercentage'] = round($state->value->current_tilt/512);
-                } else {
-                    $device['tilt'] = null;
-                }
-
-                // Everything smaller than 1000 (from 51200) is up
-                $device['up'] = ($device['position'] < 1000);
-
-                // Extended means down and tilted or down
-                $device['down'] = ($device['position'] > 50000 && ($device['tilt'] == null || $device['tilt'] > 40000));
+            // Set position in percent
+			if ($state->name == 'core:ClosureState' || $state->name == 'core:DeploymentState'){
+				$device['positionPercentage'] = $state->value;
 			}
-		}
+
+            // Set tilt 
+            if ($state->name == 'core:SlateOrientationState'){
+                $device['tiltPercentage'] = $state->value;
+            }
+
+            // Set my position
+            if ($state->name == 'core:Memorized1PositionState'){
+                $device['myPositionPercentage'] = $state->value;
+            }
+
+            // Set my tilt position
+            if ($state->name == 'core:Memorized1OrientationState'){
+                $device['myTiltPercentage'] = $state->value;
+            }
+        }
+
+        // Set overall state
+        $device['up'] = ($device['positionPercentage'] < 3);
+        $device['down'] = ($device['positionPercentage'] > 95 && ($device['tiltPercentage'] == null || $device['tiltPercentage'] > 50));
+        $device['my'] = ($device['positionPercentage'] == $device['myPositionPercentage'] && $device['tiltPercentage'] == $device['myTiltPercentage']);
 
         // Add to device list
         $devices[] = $device;
