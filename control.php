@@ -103,11 +103,12 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
     // Get state information
     $stateData = getStateData();
 
-    // Add at least one value
-    addWeatherValues($stateData, $temperature, $radiation, $sunshine);
-
     // Get weather data
     list($temperature, $rain, $radiation, $sunshine, $wind, $gust) = getWeatherData(CACHED);
+
+    // Add at least one value
+    addWeatherValues($stateData, $temperature, $radiation, $sunshine);
+    
     list($averagetemp, $averagerad, $averagesun) = getWheaterAverage($stateData);
     echo getWeatherDataInfo($temperature, $averagetemp, $rain, $radiation, $averagerad, $sunshine, $averagesun, $wind, $gust, $hour, $minute);
 
