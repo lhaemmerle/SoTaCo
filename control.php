@@ -20,6 +20,9 @@ if (!file_exists($configFile) || !is_readable($configFile)){
     require($configFile);
 }
 
+// Check config
+checkConfig();
+
 // Set timezone
 date_default_timezone_set(TIMEZONE);
 
@@ -108,7 +111,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
 
     // Add at least one value
     addWeatherValues($stateData, $temperature, $radiation, $sunshine);
-    
+
     list($averagetemp, $averagerad, $averagesun) = getWheaterAverage($stateData);
     echo getWeatherDataInfo($temperature, $averagetemp, $rain, $radiation, $averagerad, $sunshine, $averagesun, $wind, $gust, $hour, $minute);
 
@@ -169,9 +172,18 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             if ($configuredDevice['id'] == $device['id']){
                 $infrastructure[$i]['up'] = $device['up'];
                 $infrastructure[$i]['down'] = $device['down'];
+                $infrastructure[$i]['my'] = $device['my'];
                 $stateData['devices'][$i]['name'] = $device['name'];
                 $stateData['devices'][$i]['id'] = $device['id'];
             }
+        }
+    }
+
+    // Set device varname states
+    $eligibleStates = ['up', 'my', 'down'];
+    foreach($infrastructure as $device){
+        foreach($eligibleStates as $eligibleState){
+            ${$device['varname'].'_'.$eligibleState} = $device[$eligibleState]; 
         }
     }
 
@@ -196,14 +208,14 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             // Create expression of condition
             $expresssion = getSanitizedExpression($condition);
 
-            printValueIfOnDebug("Condition to test for '{$device['name']}' to set action '{$action}': ".$condition);
+            printValueIfOnDebug("Condition to test for '{$device['name']}' ({$device['varname']}) to set action '{$action}': ".$condition);
 
             // Execute expression
             try {
                 $conditionEvaluationResult = @eval($expresssion);
             }  catch (Throwable $t) {
                 echo $expresssion;
-                printError("Invalid condition ('".$condition."') in rule for device '{$device['name']}'");
+                printError("Invalid condition ('".$condition."') in rule for device '{$device['name']}' ({$device['varname']})");
                 continue;
             }
 
@@ -215,14 +227,14 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
             }
 
             if (($action == 'up' && $device['up']) || ($action == 'down' && $device['down'])){
-                printValueIfOnDebug("Ignoring action '{$action}' for '{$device['name']}' because no change needed");
+                printValueIfOnDebug("Ignoring action '{$action}' for '{$device['name']}' ({$device['varname']}) because no change needed");
             } else if (EXECUTE){
 
                 // Execute command
                 $result = sendCommand($device['id'], $action);
                 printValueIfOnDebug($result);
 
-                echo date('Y-m-d H:i:s')." Executed action '{$action}' for blind '{$device['name']}'\n";
+                echo date('Y-m-d H:i:s')." Executed action '{$action}' for blind '{$device['name']}' ({$device['varname']}) due to rule: $condition\n";
 
                 // Wait for some time before issueing next command
                 // Not sure if this is needed
@@ -240,7 +252,7 @@ if (!defined('TAHOMA_BASE_URL') || isset($opts['h'])){
                     $stateData['devices'][$i]['executedRules'][$today][$condition] = 1;
                 }
             } else {
-                echo date('Y-m-d H:i:s')." Dry Run: Would execute action '{$action}' for blind '{$device['name']}'\n";
+                echo date('Y-m-d H:i:s')." Dry Run: Would execute action '{$action}' for blind '{$device['name']}' ({$device['varname']}) due to rule: $condition\n";
             }
 
             // Execute only the first matching rule to prevent contradicting rules
@@ -335,7 +347,7 @@ function getDeviceData($deviceID = '', $cached = false){
             }
         }
 
-        // Set overall state
+        // Set states
         $device['up'] = ($device['positionPercentage'] < 3);
         $device['down'] = ($device['positionPercentage'] > 95 && ($device['tiltPercentage'] == null || $device['tiltPercentage'] > 50));
         $device['my'] = ($device['positionPercentage'] == $device['myPositionPercentage'] && $device['tiltPercentage'] == $device['myTiltPercentage']);
@@ -496,7 +508,7 @@ function getWeatherData($cached = false){
 function  showHelp(){
     $deviceList = '';
     foreach(TAHOMA_DEVICES as $i => $info){
-        $deviceList .= $i.' '.$info['name']."\n";
+        $deviceList .= $i.' '.$info['name']." (".$info['varname'].")\n";
     }
 
     echo <<<MAN
@@ -631,7 +643,7 @@ function checkCondition($condition){
     foreach ($components as $component){
 
         // Check if all components are allowed variables
-        if (!in_array($component, $allowedVariables)){
+        if (!in_array(trim($component), $allowedVariables)){
             printErrorAndExit('Invalid condition: Variable '.$component.' not allowed in condition '.$condition);
         }
     }
@@ -674,6 +686,15 @@ function printErrorAndExit($message){
  */
 function getAllowedVariables(){
     $allowedVariables = [];
+
+    // Add infrastructure variables
+    foreach(TAHOMA_DEVICES as $i => $info){
+        $allowedVariables[] = $info['varname'].'_up';
+        $allowedVariables[] = $info['varname'].'_my';
+        $allowedVariables[] = $info['varname'].'_down';
+    }
+    
+    // Add other variables
     $allowedVariables[] = 'averagetemp';
     $allowedVariables[] = 'averagerad';
     $allowedVariables[] = 'averagesun';
@@ -712,7 +733,7 @@ function getSanitizedExpression($condition){
     $expression = $condition;
     $variables = getAllowedVariables();
     foreach ($variables as $variable){
-        $expression = preg_replace('/'.$variable.'/', '$'.$variable.'', $expression);
+        $expression = preg_replace('/(^|[^_])'.$variable.'/', '$1\$'.$variable.'', $expression);
     }
 
     return 'return ('.$expression.');';
@@ -881,4 +902,33 @@ function getStateData(){
     }
 
     return $stateData;
+}
+
+/**
+ * Check configuration to see if it is valid
+ */
+function checkConfig(){
+    $requiredKeys = ['name', 'id', 'rules', 'varname'];
+    $optionalKeys = [];
+    $entry = 1;
+    foreach(TAHOMA_DEVICES as $k => $info){
+        foreach ($requiredKeys as $requiredKey){
+            if (!isset($info[$requiredKey])){
+                printErrorAndExit('Configuration check failed: Missing '.$requiredKey.' in '.$entry.'. configuration entry');
+            }
+
+            if ($requiredKey == 'varname' && !preg_match('/^[0-9a-zA-Z]+$/', $info[$requiredKey])){
+                printErrorAndExit('Configuration check failed: Entry '.$requiredKey.' must be a string only containing letters and numbers for entry with name '.$info['name']);
+            }
+
+            if ($requiredKey == 'rules' && !is_array($info[$requiredKey])){
+                printErrorAndExit('Configuration check failed: Entry '.$requiredKey.' must be an array for entry with name '.$info['name']);
+            }
+        }
+
+        foreach ($optionalKeys as $optionalKey){
+
+        }
+        $entry++;
+    }
 }

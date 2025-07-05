@@ -74,6 +74,7 @@ define('TAHOMA_DEVICES',  [
 	// Example rules
     [
 		'name' => 'Children',
+		'varname' => 'chd',
 		'id' => 'io://0000-0000-0000/0000001',
         'rules' => [
 			'wind > 50' => 'up',
@@ -84,6 +85,7 @@ define('TAHOMA_DEVICES',  [
 	],
 	[
 		'name' => 'Kitchen',
+		'varname' => 'ktch',
 		'id' => 'io://0000-0000-0000/0000002',
         'rules' => [
 			'wind > 50' => 'up',
@@ -94,6 +96,7 @@ define('TAHOMA_DEVICES',  [
 	],
 	[
 		'name' => 'Parents',
+		'varname' => 'prts',
 		'id' => 'io://0000-0000-0000/0000003',
         'rules' => [
 			'wind > 50' => 'up',
@@ -104,6 +107,7 @@ define('TAHOMA_DEVICES',  [
 	],
     [
 		'name' => 'Balcony',
+		'varname' => 'blc',
 		'id' => 'io://0000-0000-0000/0000004',
         'rules' => [
 			'rain > 0.2' => 'up',
@@ -113,6 +117,7 @@ define('TAHOMA_DEVICES',  [
 	],
     [
 		'name' => 'Guestroom',
+		'varname' => 'gr',
 		'id' => 'io://0000-0000-0000/0000005',
         'rules' => [
 			'gust > 90' => 'up',
