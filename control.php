@@ -634,7 +634,7 @@ function checkCondition($condition){
     $operators = '\&\&|\|\||\!|\(|\)|\>|\<|=';
 
     // Split by operators, values and white space
-    $components = preg_split('/\s*('.$operators.'|[\d+\.])\s*/', $condition, 0, PREG_SPLIT_NO_EMPTY);
+    $components = preg_split('/\s*('.$operators.'|\-?[\d+\.])\s*/', $condition, 0, PREG_SPLIT_NO_EMPTY);
 
     // Set allowed variables
     $allowedVariables = getAllowedVariables();
